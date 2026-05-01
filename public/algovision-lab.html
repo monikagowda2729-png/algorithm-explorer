@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>AlgoVision Lab — Visualize, Benchmark & Analyze Algorithms</title>
+<meta name="description" content="Interactive lab to visualize, benchmark, and analyze sorting, divide & conquer, and graph algorithms with real-time charts and reports." />
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#0b1020; --panel:#11172e; --panel-2:#0e1428; --muted:#8aa0c7; --text:#e9eefb;
+    --primary:#7c5cff; --primary-2:#22d3ee; --accent:#f472b6; --ok:#34d399; --warn:#fbbf24; --bad:#fb7185;
+    --border:#1f2747; --chip:#1a2244;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:radial-gradient(1200px 800px at 10% -10%,#1b2150 0%,transparent 60%),radial-gradient(900px 700px at 110% 10%,#0f3a4a 0%,transparent 55%),var(--bg);color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif}
+  header{display:flex;align-items:center;justify-content:space-between;padding:18px 28px;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;backdrop-filter:blur(8px);background:rgba(11,16,32,.7)}
+  .logo{display:flex;gap:12px;align-items:center;font-weight:700;letter-spacing:.3px}
+  .logo-mark{width:34px;height:34px;border-radius:10px;background:conic-gradient(from 200deg,var(--primary),var(--primary-2),var(--accent),var(--primary));box-shadow:0 6px 24px rgba(124,92,255,.45)}
+  .badge{font-size:11px;color:var(--muted);border:1px solid var(--border);padding:4px 8px;border-radius:999px;background:var(--chip)}
+  main{display:grid;grid-template-columns:300px 1fr 340px;gap:18px;padding:18px}
+  @media(max-width:1200px){main{grid-template-columns:1fr}}
+  .panel{background:linear-gradient(180deg,var(--panel),var(--panel-2));border:1px solid var(--border);border-radius:16px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+  h2{font-size:14px;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);margin:0 0 12px}
+  h3{margin:0 0 10px;font-size:14px;color:#cdd6f4}
+  label{display:block;font-size:12px;color:var(--muted);margin:10px 0 6px}
+  select,input,button{font:inherit;color:var(--text)}
+  select,input[type=number],input[type=text]{width:100%;padding:9px 10px;background:#0a1024;border:1px solid var(--border);border-radius:10px;outline:none}
+  select:focus,input:focus{border-color:var(--primary)}
+  .row{display:flex;gap:8px}
+  .row > *{flex:1}
+  button{cursor:pointer;border:1px solid var(--border);background:#161e3d;padding:9px 12px;border-radius:10px;transition:transform .05s,background .2s,border-color .2s}
+  button:hover{background:#1d2750;border-color:#2c3a72}
+  button:active{transform:translateY(1px)}
+  .btn-primary{background:linear-gradient(135deg,var(--primary),#5b8cff);border-color:transparent}
+  .btn-primary:hover{background:linear-gradient(135deg,#8a6dff,#6f9bff)}
+  .btn-ghost{background:transparent}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+  .chip{font-size:11px;padding:4px 8px;border-radius:999px;background:var(--chip);border:1px solid var(--border);color:#b9c4e3;cursor:pointer}
+  .chip.active{background:linear-gradient(135deg,var(--primary),#5b8cff);color:white;border-color:transparent}
+  #viz{height:340px;border-radius:12px;background:#070c1c;border:1px solid var(--border);overflow:hidden;position:relative}
+  #viz canvas, #viz svg{display:block;width:100%;height:100%}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px}
+  .stat{background:#0a1024;border:1px solid var(--border);border-radius:12px;padding:10px}
+  .stat .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+  .stat .v{font-size:18px;font-weight:700;margin-top:2px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .chart{height:260px;background:#070c1c;border:1px solid var(--border);border-radius:12px}
+  .leader{display:flex;flex-direction:column;gap:8px}
+  .leader .item{display:flex;justify-content:space-between;align-items:center;padding:9px 11px;border:1px solid var(--border);border-radius:10px;background:#0a1024}
+  .leader .rank{width:24px;height:24px;border-radius:8px;background:var(--chip);display:inline-flex;align-items:center;justify-content:center;font-size:12px;margin-right:8px}
+  .leader .rank.top{background:linear-gradient(135deg,var(--warn),#f59e0b);color:#1a1304}
+  .insights{font-size:13px;color:#cdd6f4;line-height:1.5}
+  .insights p{margin:6px 0}
+  footer{padding:18px 28px;color:var(--muted);font-size:12px;text-align:center;border-top:1px solid var(--border);margin-top:18px}
+  .kbd{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:#0a1024;border:1px solid var(--border);padding:1px 6px;border-radius:6px;font-size:11px;color:#9fb1de}
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .complexity{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:8px;background:#0a1024;border:1px solid var(--border);border-radius:10px;padding:8px 10px}
+  .complexity b{color:#cdd6f4;font-weight:600}
+  details{background:#0a1024;border:1px solid var(--border);border-radius:10px;padding:8px 10px;margin-top:10px}
+  summary{cursor:pointer;color:#cdd6f4;font-size:13px}
+  .legend{display:flex;gap:10px;flex-wrap:wrap;font-size:11px;color:var(--muted);margin-top:6px}
+  .swatch{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:middle}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo"><div class="logo-mark"></div><div>AlgoVision Lab <span class="badge">v1.0</span></div></div>
+  <div style="display:flex;gap:8px">
+    <button class="btn-ghost" id="exportCsv">Export CSV</button>
+    <button class="btn-ghost" id="exportPdf">Export PDF</button>
+    <button class="btn-primary" id="runBenchmark">Run Benchmark</button>
+  </div>
+</header>
+
+<main>
+  <!-- LEFT: CONTROLS -->
+  <section class="panel">
+    <h2>Algorithm</h2>
+    <label>Category</label>
+    <select id="category">
+      <option value="sort">Sorting</option>
+      <option value="dac">Divide & Conquer</option>
+      <option value="graph">Graph</option>
+    </select>
+    <label>Algorithm</label>
+    <select id="algorithm"></select>
+
+    <h2 style="margin-top:18px">Input</h2>
+    <label>Distribution</label>
+    <div class="chips" id="distChips">
+      <span class="chip active" data-dist="random">Random</span>
+      <span class="chip" data-dist="sorted">Sorted</span>
+      <span class="chip" data-dist="reversed">Reversed</span>
+      <span class="chip" data-dist="nearly">Nearly Sorted</span>
+      <span class="chip" data-dist="custom">Custom</span>
+    </div>
+    <label>Size <span id="sizeVal" style="float:right;color:#cdd6f4">40</span></label>
+    <input type="range" id="size" min="5" max="200" value="40" style="width:100%">
+    <label id="customLbl" style="display:none">Custom values (comma-separated)</label>
+    <input type="text" id="customInput" placeholder="e.g. 5,3,8,1,9" style="display:none">
+
+    <div id="graphControls" style="display:none">
+      <label>Nodes <span id="nodesVal" style="float:right;color:#cdd6f4">8</span></label>
+      <input type="range" id="nodes" min="4" max="20" value="8" style="width:100%">
+      <label>Edge density <span id="densityVal" style="float:right;color:#cdd6f4">0.35</span></label>
+      <input type="range" id="density" min="20" max="80" value="35" style="width:100%">
+    </div>
+
+    <h2 style="margin-top:18px">Playback</h2>
+    <div class="row">
+      <button id="play">▶ Play</button>
+      <button id="pause">⏸ Pause</button>
+      <button id="step">⏭ Step</button>
+    </div>
+    <label>Speed <span id="speedVal" style="float:right;color:#cdd6f4">5</span></label>
+    <input type="range" id="speed" min="1" max="10" value="5" style="width:100%">
+    <div class="toolbar">
+      <button id="regen">🔀 New Input</button>
+      <button id="reset">↺ Reset</button>
+    </div>
+    <details><summary>Shortcuts</summary>
+      <div style="font-size:12px;color:var(--muted);margin-top:6px">
+        <span class="kbd">Space</span> play/pause · <span class="kbd">→</span> step · <span class="kbd">R</span> regenerate
+      </div>
+    </details>
+  </section>
+
+  <!-- CENTER: VISUALIZATION + CHARTS -->
+  <section class="panel">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h2 style="margin:0">Visualization</h2>
+      <div class="legend">
+        <span><span class="swatch" style="background:#7c5cff"></span>idle</span>
+        <span><span class="swatch" style="background:#fbbf24"></span>compare</span>
+        <span><span class="swatch" style="background:#fb7185"></span>swap/active</span>
+        <span><span class="swatch" style="background:#34d399"></span>sorted/visited</span>
+      </div>
+    </div>
+    <div id="viz"></div>
+    <div class="stats">
+      <div class="stat"><div class="k">Comparisons</div><div class="v" id="sComp">0</div></div>
+      <div class="stat"><div class="k">Swaps / Ops</div><div class="v" id="sSwap">0</div></div>
+      <div class="stat"><div class="k">Time (ms)</div><div class="v" id="sTime">0.00</div></div>
+      <div class="stat"><div class="k">Memory (KB)</div><div class="v" id="sMem">0.0</div></div>
+    </div>
+    <div class="complexity">
+      <div>Best <b id="cOmega">Ω(–)</b></div>
+      <div>Avg <b id="cTheta">Θ(–)</b></div>
+      <div>Worst <b id="cBigO">O(–)</b></div>
+      <div>Space <b id="cSpace">–</b></div>
+    </div>
+
+    <h2 style="margin-top:18px">Performance Dashboard</h2>
+    <div class="grid2">
+      <div class="chart" id="chartTime"></div>
+      <div class="chart" id="chartMem"></div>
+    </div>
+  </section>
+
+  <!-- RIGHT: LEADERBOARD + INSIGHTS -->
+  <section class="panel">
+    <h2>Leaderboard</h2>
+    <div class="leader" id="leaderboard"><div style="color:var(--muted);font-size:13px">Run a benchmark to populate.</div></div>
+    <h2 style="margin-top:18px">Insights</h2>
+    <div class="insights" id="insights"><p style="color:var(--muted)">Insights will appear after running benchmarks.</p></div>
+    <h2 style="margin-top:18px">About</h2>
+    <p style="font-size:12px;color:var(--muted);line-height:1.6;margin:0">
+      AlgoVision Lab visualizes step-by-step algorithm execution, benchmarks time/memory/operations, and contrasts observed performance with asymptotic bounds (O, Θ, Ω).
+    </p>
+  </section>
+</main>
+
+<footer>AlgoVision Lab · Built for design & analysis of algorithms</footer>
+
+<script>
+/* ============== ALGORITHM CATALOG ============== */
+const ALGOS = {
+  sort: {
+    bubble: {name:"Bubble Sort", best:"Ω(n)", avg:"Θ(n²)", worst:"O(n²)", space:"O(1)"},
+    merge:  {name:"Merge Sort",  best:"Ω(n log n)", avg:"Θ(n log n)", worst:"O(n log n)", space:"O(n)"},
+    quick:  {name:"Quick Sort",  best:"Ω(n log n)", avg:"Θ(n log n)", worst:"O(n²)", space:"O(log n)"},
+  },
+  dac: {
+    mergeR: {name:"Merge Sort (recursive)", best:"Ω(n log n)", avg:"Θ(n log n)", worst:"O(n log n)", space:"O(n)"},
+    quickP: {name:"Quick Sort (partition)", best:"Ω(n log n)", avg:"Θ(n log n)", worst:"O(n²)", space:"O(log n)"},
+    binary: {name:"Binary Search", best:"Ω(1)", avg:"Θ(log n)", worst:"O(log n)", space:"O(1)"},
+  },
+  graph: {
+    bfs:      {name:"Breadth-First Search", best:"Ω(V+E)", avg:"Θ(V+E)", worst:"O(V+E)", space:"O(V)"},
+    dfs:      {name:"Depth-First Search",   best:"Ω(V+E)", avg:"Θ(V+E)", worst:"O(V+E)", space:"O(V)"},
+    dijkstra: {name:"Dijkstra",             best:"Ω(E+V log V)", avg:"Θ((V+E) log V)", worst:"O((V+E) log V)", space:"O(V)"},
+    kruskal:  {name:"Kruskal MST",          best:"Ω(E log E)", avg:"Θ(E log E)", worst:"O(E log V)", space:"O(V)"},
+  }
+};
+
+/* ============== STATE ============== */
+const S = {
+  category:"sort", algoKey:"bubble",
+  dist:"random", size:40, custom:"",
+  nodes:8, density:35,
+  data:[], graph:null,
+  steps:[], stepIdx:0, playing:false, speed:5,
+  comp:0, swap:0, timeMs:0, memKb:0,
+  bench:[], leaderboard:[],
+};
+
+/* ============== DOM REFS ============== */
+const $ = id => document.getElementById(id);
+const cat=$("category"), alg=$("algorithm");
+
+function fillAlgos(){
+  alg.innerHTML="";
+  for(const k of Object.keys(ALGOS[S.category])){
+    const o=document.createElement("option"); o.value=k; o.textContent=ALGOS[S.category][k].name; alg.appendChild(o);
+  }
+  S.algoKey=Object.keys(ALGOS[S.category])[0];
+  alg.value=S.algoKey;
+  updateComplexity();
+  $("graphControls").style.display = S.category==="graph"?"block":"none";
+}
+function updateComplexity(){
+  const a=ALGOS[S.category][S.algoKey]; if(!a) return;
+  $("cOmega").textContent=a.best; $("cTheta").textContent=a.avg; $("cBigO").textContent=a.worst; $("cSpace").textContent=a.space;
+}
+
+/* ============== INPUT GENERATION ============== */
+function genArray(n,dist){
+  let arr;
+  if(dist==="custom"){
+    arr=(S.custom||"").split(/[, ]+/).map(x=>parseInt(x,10)).filter(x=>!isNaN(x));
+    if(!arr.length) arr=Array.from({length:n},(_,i)=>Math.floor(Math.random()*100)+1);
+  } else if(dist==="sorted"){
+    arr=Array.from({length:n},(_,i)=>i+1);
+  } else if(dist==="reversed"){
+    arr=Array.from({length:n},(_,i)=>n-i);
+  } else if(dist==="nearly"){
+    arr=Array.from({length:n},(_,i)=>i+1);
+    for(let k=0;k<Math.max(2,Math.floor(n*0.05));k++){
+      const a=Math.floor(Math.random()*n), b=Math.floor(Math.random()*n);
+      [arr[a],arr[b]]=[arr[b],arr[a]];
+    }
+  } else { arr=Array.from({length:n},()=>Math.floor(Math.random()*100)+1); }
+  return arr;
+}
+function genGraph(n,density){
+  const nodes=Array.from({length:n},(_,i)=>({id:i,x:0,y:0}));
+  const R=130, cx=180, cy=160;
+  nodes.forEach((nd,i)=>{ const a=2*Math.PI*i/n; nd.x=cx+R*Math.cos(a); nd.y=cy+R*Math.sin(a); });
+  const edges=[]; const p=density/100;
+  for(let i=0;i<n;i++) for(let j=i+1;j<n;j++){
+    if(Math.random()<p) edges.push({u:i,v:j,w:Math.floor(Math.random()*9)+1});
+  }
+  // ensure connected
+  for(let i=1;i<n;i++){
+    if(!edges.some(e=>(e.u===i||e.v===i))){
+      edges.push({u:i-1,v:i,w:Math.floor(Math.random()*9)+1});
+    }
+  }
+  return {nodes,edges};
+}
+
+/* ============== STEP RECORDERS ============== */
+function rec(steps,type,payload){ steps.push({type,...payload}); }
+
+/* ============== SORTING (records steps) ============== */
+function bubbleSort(a){
+  const arr=a.slice(), steps=[]; let comp=0,swap=0;
+  for(let i=0;i<arr.length;i++){
+    for(let j=0;j<arr.length-i-1;j++){
+      comp++; rec(steps,"compare",{i:j,j:j+1,arr:arr.slice()});
+      if(arr[j]>arr[j+1]){ [arr[j],arr[j+1]]=[arr[j+1],arr[j]]; swap++; rec(steps,"swap",{i:j,j:j+1,arr:arr.slice()}); }
+    }
+    rec(steps,"sorted",{idx:arr.length-i-1,arr:arr.slice()});
+  }
+  rec(steps,"done",{arr:arr.slice()});
+  return {arr,steps,comp,swap};
+}
+function mergeSort(a){
+  const arr=a.slice(), steps=[]; let comp=0,swap=0;
+  function ms(l,r){
+    if(l>=r) return;
+    const m=(l+r)>>1; ms(l,m); ms(m+1,r);
+    const tmp=[]; let i=l,j=m+1;
+    while(i<=m&&j<=r){ comp++; rec(steps,"compare",{i,j,arr:arr.slice()}); if(arr[i]<=arr[j]) tmp.push(arr[i++]); else tmp.push(arr[j++]); }
+    while(i<=m) tmp.push(arr[i++]);
+    while(j<=r) tmp.push(arr[j++]);
+    for(let k=0;k<tmp.length;k++){ arr[l+k]=tmp[k]; swap++; rec(steps,"swap",{i:l+k,j:l+k,arr:arr.slice()}); }
+  }
+  ms(0,arr.length-1);
+  rec(steps,"done",{arr:arr.slice()});
+  return {arr,steps,comp,swap};
+}
+function quickSort(a){
+  const arr=a.slice(), steps=[]; let comp=0,swap=0;
+  function qs(l,r){
+    if(l>=r) return;
+    const piv=arr[r]; let i=l-1;
+    for(let j=l;j<r;j++){
+      comp++; rec(steps,"compare",{i:j,j:r,arr:arr.slice()});
+      if(arr[j]<=piv){ i++; [arr[i],arr[j]]=[arr[j],arr[i]]; swap++; rec(steps,"swap",{i,j,arr:arr.slice()}); }
+    }
+    [arr[i+1],arr[r]]=[arr[r],arr[i+1]]; swap++; rec(steps,"swap",{i:i+1,j:r,arr:arr.slice()});
+    qs(l,i); qs(i+2,r);
+  }
+  qs(0,arr.length-1);
+  rec(steps,"done",{arr:arr.slice()});
+  return {arr,steps,comp,swap};
+}
+function binarySearch(a){
+  const arr=a.slice().sort((x,y)=>x-y), steps=[]; let comp=0;
+  const target=arr[Math.floor(Math.random()*arr.length)];
+  let l=0,r=arr.length-1, found=-1;
+  while(l<=r){
+    const m=(l+r)>>1; comp++;
+    rec(steps,"compare",{i:m,j:m,arr:arr.slice(),lo:l,hi:r,target});
+    if(arr[m]===target){ found=m; rec(steps,"sorted",{idx:m,arr:arr.slice()}); break; }
+    if(arr[m]<target) l=m+1; else r=m-1;
+  }
+  rec(steps,"done",{arr:arr.slice(),target,found});
+  return {arr,steps,comp,swap:0};
+}
+
+/* ============== GRAPH ALGORITHMS ============== */
+function adjList(g){ const a=Array.from({length:g.nodes.length},()=>[]); g.edges.forEach(e=>{a[e.u].push({v:e.v,w:e.w}); a[e.v].push({v:e.u,w:e.w});}); return a; }
+function bfs(g){
+  const adj=adjList(g), steps=[], visited=new Set(), q=[0]; let ops=0;
+  visited.add(0); rec(steps,"gvisit",{node:0,visited:[...visited],edge:null});
+  while(q.length){
+    const u=q.shift();
+    for(const {v} of adj[u]){ ops++;
+      if(!visited.has(v)){ visited.add(v); q.push(v); rec(steps,"gvisit",{node:v,visited:[...visited],edge:[u,v]}); }
+    }
+  }
+  rec(steps,"done",{});
+  return {steps,comp:ops,swap:0};
+}
+function dfs(g){
+  const adj=adjList(g), steps=[], visited=new Set(); let ops=0;
+  function go(u){ visited.add(u); rec(steps,"gvisit",{node:u,visited:[...visited],edge:null});
+    for(const {v} of adj[u]){ ops++; if(!visited.has(v)){ rec(steps,"gvisit",{node:v,visited:[...visited],edge:[u,v]}); go(v); } } }
+  go(0);
+  rec(steps,"done",{});
+  return {steps,comp:ops,swap:0};
+}
+function dijkstra(g){
+  const adj=adjList(g), n=g.nodes.length, dist=Array(n).fill(Infinity), used=Array(n).fill(false);
+  const steps=[]; let ops=0; dist[0]=0;
+  for(let it=0;it<n;it++){
+    let u=-1, best=Infinity;
+    for(let i=0;i<n;i++) if(!used[i]&&dist[i]<best){best=dist[i];u=i;}
+    if(u===-1) break; used[u]=true;
+    rec(steps,"gvisit",{node:u,visited:Array.from({length:n},(_,i)=>i).filter(i=>used[i]),edge:null});
+    for(const {v,w} of adj[u]){ ops++;
+      if(dist[u]+w<dist[v]){ dist[v]=dist[u]+w; rec(steps,"gvisit",{node:v,visited:Array.from({length:n},(_,i)=>i).filter(i=>used[i]),edge:[u,v]}); }
+    }
+  }
+  rec(steps,"done",{dist});
+  return {steps,comp:ops,swap:0};
+}
+function kruskal(g){
+  const steps=[], edges=g.edges.slice().sort((a,b)=>a.w-b.w); let ops=0;
+  const parent=Array.from({length:g.nodes.length},(_,i)=>i);
+  function find(x){ while(parent[x]!==x){parent[x]=parent[parent[x]]; x=parent[x];} return x; }
+  const visited=new Set(); const mst=[];
+  for(const e of edges){ ops++;
+    const ru=find(e.u), rv=find(e.v);
+    if(ru!==rv){ parent[ru]=rv; mst.push(e); visited.add(e.u); visited.add(e.v);
+      rec(steps,"gvisit",{node:e.v,visited:[...visited],edge:[e.u,e.v]}); }
+  }
+  rec(steps,"done",{mst});
+  return {steps,comp:ops,swap:0};
+}
+
+/* ============== RUN ALGORITHM ============== */
+function runAlgo(){
+  const t0=performance.now();
+  let res;
+  if(S.category==="graph"){
+    if(!S.graph) S.graph=genGraph(S.nodes,S.density);
+    if(S.algoKey==="bfs") res=bfs(S.graph);
+    else if(S.algoKey==="dfs") res=dfs(S.graph);
+    else if(S.algoKey==="dijkstra") res=dijkstra(S.graph);
+    else res=kruskal(S.graph);
+  } else {
+    const arr=S.data.length?S.data:genArray(S.size,S.dist);
+    S.data=arr;
+    const k=S.algoKey;
+    if(k==="bubble") res=bubbleSort(arr);
+    else if(k==="merge"||k==="mergeR") res=mergeSort(arr);
+    else if(k==="quick"||k==="quickP") res=quickSort(arr);
+    else if(k==="binary") res=binarySearch(arr);
+  }
+  S.timeMs=performance.now()-t0;
+  S.steps=res.steps; S.stepIdx=0; S.comp=res.comp; S.swap=res.swap;
+  S.memKb=estimateMem();
+  updateStats(); render();
+}
+function estimateMem(){
+  if(S.category==="graph"){ return ((S.graph.nodes.length*8 + S.graph.edges.length*16)/1024); }
+  return ((S.data.length*8 + (S.algoKey.startsWith("merge")?S.data.length*8:0))/1024);
+}
+function updateStats(){
+  $("sComp").textContent=S.comp;
+  $("sSwap").textContent=S.swap;
+  $("sTime").textContent=S.timeMs.toFixed(2);
+  $("sMem").textContent=S.memKb.toFixed(1);
+}
+
+/* ============== RENDER ============== */
+const viz=$("viz");
+function render(){
+  if(S.category==="graph") renderGraph(); else renderArray();
+}
+function curStep(){ return S.steps[Math.min(S.stepIdx,S.steps.length-1)]; }
+
+function renderArray(){
+  const step=curStep()||{arr:S.data,type:"idle"};
+  const arr=step.arr||S.data;
+  const W=viz.clientWidth, H=viz.clientHeight;
+  const max=Math.max(...arr,1);
+  const bw=Math.max(2,(W-20)/arr.length - 2);
+  let bars="";
+  for(let i=0;i<arr.length;i++){
+    const h=(arr[i]/max)*(H-40);
+    let color="#7c5cff";
+    if(step.type==="compare" && (i===step.i||i===step.j)) color="#fbbf24";
+    if(step.type==="swap" && (i===step.i||i===step.j)) color="#fb7185";
+    if(step.type==="sorted" && i===step.idx) color="#34d399";
+    if(step.type==="done") color="#34d399";
+    const x=10+i*((W-20)/arr.length);
+    bars+=`<rect x="${x}" y="${H-h-10}" width="${bw}" height="${h}" rx="3" fill="${color}"/>`;
+    if(arr.length<=40) bars+=`<text x="${x+bw/2}" y="${H-5}" text-anchor="middle" font-size="9" fill="#8aa0c7">${arr[i]}</text>`;
+  }
+  viz.innerHTML=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">${bars}</svg>`;
+}
+function renderGraph(){
+  const g=S.graph; if(!g) return;
+  const step=curStep()||{type:"idle",visited:[]};
+  const W=viz.clientWidth, H=viz.clientHeight;
+  // re-center
+  const cx=W/2, cy=H/2, R=Math.min(W,H)/2-30;
+  g.nodes.forEach((nd,i)=>{ const a=2*Math.PI*i/g.nodes.length; nd.x=cx+R*Math.cos(a); nd.y=cy+R*Math.sin(a); });
+  const visited=new Set(step.visited||[]);
+  const activeEdge=step.edge||null;
+  let svg=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">`;
+  for(const e of g.edges){
+    const a=g.nodes[e.u], b=g.nodes[e.v];
+    const isActive = activeEdge && ((activeEdge[0]===e.u&&activeEdge[1]===e.v)||(activeEdge[0]===e.v&&activeEdge[1]===e.u));
+    svg+=`<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="${isActive?'#fb7185':'#2c3a72'}" stroke-width="${isActive?3:1.5}"/>`;
+    const mx=(a.x+b.x)/2, my=(a.y+b.y)/2;
+    svg+=`<text x="${mx}" y="${my}" font-size="10" fill="#8aa0c7">${e.w}</text>`;
+  }
+  for(const nd of g.nodes){
+    const v=visited.has(nd.id);
+    const fill=v?"#34d399":"#7c5cff";
+    svg+=`<circle cx="${nd.x}" cy="${nd.y}" r="14" fill="${fill}" stroke="#0b1020" stroke-width="2"/>`;
+    svg+=`<text x="${nd.x}" y="${nd.y+4}" text-anchor="middle" font-size="11" fill="#0b1020" font-weight="700">${nd.id}</text>`;
+  }
+  svg+=`</svg>`;
+  viz.innerHTML=svg;
+}
+
+/* ============== PLAYBACK ============== */
+let timer=null;
+function play(){ if(S.playing) return; S.playing=true; tick(); }
+function pause(){ S.playing=false; if(timer) clearTimeout(timer); }
+function step1(){ if(S.stepIdx<S.steps.length-1){ S.stepIdx++; render(); } }
+function tick(){
+  if(!S.playing) return;
+  if(S.stepIdx>=S.steps.length-1){ S.playing=false; return; }
+  S.stepIdx++; render();
+  const delay=Math.max(8, 220 - S.speed*22);
+  timer=setTimeout(tick, delay);
+}
+
+/* ============== BENCHMARK ============== */
+function benchOne(algoKey, category, size, dist){
+  let data, g;
+  if(category==="graph"){ g=genGraph(size, 35); }
+  else { data=genArray(size,dist); }
+  const t0=performance.now();
+  let res;
+  if(category==="graph"){
+    if(algoKey==="bfs") res=bfs(g);
+    else if(algoKey==="dfs") res=dfs(g);
+    else if(algoKey==="dijkstra") res=dijkstra(g);
+    else res=kruskal(g);
+  } else {
+    if(algoKey==="bubble") res=bubbleSort(data);
+    else if(algoKey==="merge"||algoKey==="mergeR") res=mergeSort(data);
+    else if(algoKey==="quick"||algoKey==="quickP") res=quickSort(data);
+    else if(algoKey==="binary") res=binarySearch(data);
+  }
+  const t=performance.now()-t0;
+  const mem = category==="graph" ? (g.nodes.length*8+g.edges.length*16)/1024 : (data.length*8 + (algoKey.startsWith("merge")?data.length*8:0))/1024;
+  return {algoKey, category, size, dist, time:t, mem, comp:res.comp, swap:res.swap, ops:res.comp+res.swap};
+}
+function runBenchmark(){
+  const sizes = S.category==="graph" ? [4,6,8,10,14,18] : [10,25,50,100,200];
+  const algos = Object.keys(ALGOS[S.category]);
+  const dist = S.category==="graph"?"random":S.dist;
+  const rows=[];
+  // average over a few iterations
+  for(const a of algos){
+    for(const n of sizes){
+      let t=0,m=0,c=0,s=0; const ITERS=3;
+      for(let k=0;k<ITERS;k++){
+        const r=benchOne(a,S.category,n,dist);
+        t+=r.time; m+=r.mem; c+=r.comp; s+=r.swap;
+      }
+      rows.push({algo:ALGOS[S.category][a].name, key:a, size:n, time:t/ITERS, mem:m/ITERS, comp:c/ITERS, swap:s/ITERS, dist});
+    }
+  }
+  S.bench=rows;
+  drawCharts(rows, algos);
+  updateLeaderboard(rows, algos);
+  updateInsights(rows, algos);
+}
+function drawCharts(rows, algos){
+  const traces=algos.map(a=>{
+    const r=rows.filter(x=>x.key===a);
+    return {x:r.map(x=>x.size), y:r.map(x=>x.time), name:ALGOS[S.category][a].name, mode:"lines+markers", line:{width:3}};
+  });
+  Plotly.newPlot("chartTime", traces, layout("Input Size","Time (ms)"), {displayModeBar:false, responsive:true});
+  const traces2=algos.map(a=>{
+    const r=rows.filter(x=>x.key===a);
+    return {x:r.map(x=>x.size), y:r.map(x=>x.mem), name:ALGOS[S.category][a].name, mode:"lines+markers", line:{width:3}};
+  });
+  Plotly.newPlot("chartMem", traces2, layout("Input Size","Memory (KB)"), {displayModeBar:false, responsive:true});
+}
+function layout(xt,yt){
+  return {paper_bgcolor:"#070c1c", plot_bgcolor:"#070c1c", margin:{l:48,r:14,t:14,b:40},
+    font:{color:"#cdd6f4",size:11}, xaxis:{title:xt,gridcolor:"#1f2747"}, yaxis:{title:yt,gridcolor:"#1f2747"},
+    legend:{orientation:"h",y:-0.25}};
+}
+function updateLeaderboard(rows, algos){
+  const maxN=Math.max(...rows.map(r=>r.size));
+  const top=algos.map(a=>{
+    const r=rows.filter(x=>x.key===a&&x.size===maxN)[0];
+    return {name:ALGOS[S.category][a].name, time:r.time, mem:r.mem};
+  }).sort((a,b)=>a.time-b.time);
+  S.leaderboard=top;
+  $("leaderboard").innerHTML = top.map((t,i)=>`
+    <div class="item">
+      <div><span class="rank ${i===0?'top':''}">${i+1}</span>${t.name}</div>
+      <div style="color:#8aa0c7;font-size:12px">${t.time.toFixed(2)} ms · ${t.mem.toFixed(1)} KB</div>
+    </div>`).join("");
+}
+function updateInsights(rows, algos){
+  const maxN=Math.max(...rows.map(r=>r.size));
+  const fastest = S.leaderboard[0];
+  const slowest = S.leaderboard[S.leaderboard.length-1];
+  // growth ratio between smallest and largest size for each algo
+  const growth = algos.map(a=>{
+    const list=rows.filter(x=>x.key===a).sort((x,y)=>x.size-y.size);
+    const r=list[list.length-1].time/Math.max(list[0].time,0.001);
+    return {name:ALGOS[S.category][a].name, ratio:r};
+  });
+  const lines=[];
+  lines.push(`<p>🏆 At n=${maxN}, <b>${fastest.name}</b> is fastest at <b>${fastest.time.toFixed(2)} ms</b>; <b>${slowest.name}</b> is slowest at <b>${slowest.time.toFixed(2)} ms</b>.</p>`);
+  lines.push(`<p>📈 Growth from smallest→largest input: ` + growth.map(g=>`${g.name} ×${g.ratio.toFixed(1)}`).join(", ") + `.</p>`);
+  if(S.category==="sort"){
+    lines.push(`<p>🧪 Distribution <b>${S.dist}</b> impacts comparison-heavy sorts (e.g. Bubble) far more than divide-and-conquer sorts.</p>`);
+    lines.push(`<p>📚 Theory: Bubble Θ(n²), Merge Θ(n log n), Quick Θ(n log n) avg / O(n²) worst — observed curves should mirror this ordering.</p>`);
+  } else if(S.category==="dac"){
+    lines.push(`<p>📚 Divide & conquer reduces problem size by halves: recurrence T(n)=2T(n/2)+O(n) → Θ(n log n).</p>`);
+  } else {
+    lines.push(`<p>📚 BFS/DFS scan each edge once: Θ(V+E). Dijkstra adds a priority queue → Θ((V+E) log V).</p>`);
+  }
+  $("insights").innerHTML=lines.join("");
+}
+
+/* ============== EXPORT ============== */
+function exportCSV(){
+  if(!S.bench.length){ alert("Run a benchmark first."); return; }
+  const head=["algorithm","key","size","distribution","time_ms","memory_kb","comparisons","swaps"];
+  const csv=[head.join(",")].concat(S.bench.map(r=>[r.algo,r.key,r.size,r.dist,r.time.toFixed(3),r.mem.toFixed(2),r.comp.toFixed(0),r.swap.toFixed(0)].join(","))).join("\n");
+  const blob=new Blob([csv],{type:"text/csv"}); const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob); a.download="algovision-benchmark.csv"; a.click();
+}
+async function exportPDF(){
+  if(!S.bench.length){ alert("Run a benchmark first."); return; }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({unit:"pt",format:"a4"});
+  const W=doc.internal.pageSize.getWidth();
+  doc.setFillColor(11,16,32); doc.rect(0,0,W,80,"F");
+  doc.setTextColor(233,238,251); doc.setFontSize(20); doc.text("AlgoVision Lab — Report",40,45);
+  doc.setFontSize(10); doc.setTextColor(180,190,220); doc.text(new Date().toLocaleString(),40,65);
+  doc.setTextColor(20,20,30); doc.setFontSize(13); doc.text(`Category: ${S.category} · Distribution: ${S.dist}`,40,110);
+
+  // capture charts
+  const t1=await Plotly.toImage("chartTime",{format:"png",width:700,height:380});
+  const t2=await Plotly.toImage("chartMem",{format:"png",width:700,height:380});
+  doc.addImage(t1,"PNG",40,130,520,260);
+  doc.addImage(t2,"PNG",40,400,520,260);
+
+  doc.addPage();
+  doc.setFontSize(14); doc.text("Leaderboard & Insights",40,50);
+  doc.setFontSize(11);
+  let y=80;
+  S.leaderboard.forEach((t,i)=>{ doc.text(`${i+1}. ${t.name} — ${t.time.toFixed(2)} ms · ${t.mem.toFixed(1)} KB`,40,y); y+=18; });
+  y+=12; doc.setFontSize(12); doc.text("Insights:",40,y); y+=18; doc.setFontSize(10);
+  const tmp=document.createElement("div"); tmp.innerHTML=$("insights").innerHTML;
+  tmp.querySelectorAll("p").forEach(p=>{ const lines=doc.splitTextToSize(p.textContent,500); doc.text(lines,40,y); y+=lines.length*14+4; });
+
+  doc.addPage();
+  doc.setFontSize(14); doc.text("Benchmark Data",40,50);
+  doc.setFontSize(9);
+  const head=["Algorithm","Size","Time (ms)","Memory (KB)","Comparisons","Swaps"];
+  let yy=80;
+  doc.text(head.join("    "),40,yy); yy+=16;
+  S.bench.forEach(r=>{ doc.text(`${r.algo}   ${r.size}   ${r.time.toFixed(2)}   ${r.mem.toFixed(1)}   ${r.comp.toFixed(0)}   ${r.swap.toFixed(0)}`,40,yy); yy+=12; if(yy>780){doc.addPage(); yy=50;} });
+
+  doc.save("algovision-report.pdf");
+}
+
+/* ============== EVENTS ============== */
+cat.addEventListener("change",e=>{ S.category=e.target.value; fillAlgos(); regen(); });
+alg.addEventListener("change",e=>{ S.algoKey=e.target.value; updateComplexity(); runAlgo(); });
+$("size").addEventListener("input",e=>{ S.size=+e.target.value; $("sizeVal").textContent=S.size; regen(); });
+$("speed").addEventListener("input",e=>{ S.speed=+e.target.value; $("speedVal").textContent=S.speed; });
+$("nodes").addEventListener("input",e=>{ S.nodes=+e.target.value; $("nodesVal").textContent=S.nodes; regen(); });
+$("density").addEventListener("input",e=>{ S.density=+e.target.value; $("densityVal").textContent=(S.density/100).toFixed(2); regen(); });
+$("customInput").addEventListener("input",e=>{ S.custom=e.target.value; if(S.dist==="custom") regen(); });
+document.querySelectorAll("#distChips .chip").forEach(c=>c.addEventListener("click",()=>{
+  document.querySelectorAll("#distChips .chip").forEach(x=>x.classList.remove("active"));
+  c.classList.add("active"); S.dist=c.dataset.dist;
+  const isCustom=S.dist==="custom";
+  $("customLbl").style.display=isCustom?"block":"none"; $("customInput").style.display=isCustom?"block":"none";
+  regen();
+}));
+$("play").onclick=play; $("pause").onclick=pause; $("step").onclick=step1;
+$("regen").onclick=()=>regen(); $("reset").onclick=()=>{S.stepIdx=0;render();};
+$("runBenchmark").onclick=runBenchmark;
+$("exportCsv").onclick=exportCSV; $("exportPdf").onclick=exportPDF;
+window.addEventListener("keydown",e=>{
+  if(e.code==="Space"){e.preventDefault(); S.playing?pause():play();}
+  else if(e.code==="ArrowRight") step1();
+  else if(e.key==="r"||e.key==="R") regen();
+});
+window.addEventListener("resize",()=>render());
+
+function regen(){
+  pause();
+  if(S.category==="graph"){ S.graph=genGraph(S.nodes,S.density); S.data=[]; }
+  else { S.data=genArray(S.size,S.dist); S.graph=null; }
+  runAlgo();
+}
+
+/* ============== INIT ============== */
+fillAlgos(); regen();
+</script>
+</body>
+</html>
